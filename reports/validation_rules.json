@@ -1,0 +1,70 @@
+[
+  {
+    "column": "order_date",
+    "rule": "lte_today",
+    "threshold": null,
+    "rationale": "Event dates cannot be in the future"
+  },
+  {
+    "column": "region",
+    "rule": "null_pct_lte",
+    "threshold": 1.0,
+    "rationale": "Column is expected to be populated"
+  },
+  {
+    "column": "region",
+    "rule": "in_set",
+    "threshold": [
+      "West",
+      "South",
+      "East",
+      "North"
+    ],
+    "rationale": "Controlled vocabulary"
+  },
+  {
+    "column": "amount",
+    "rule": "null_pct_lte",
+    "threshold": 1.0,
+    "rationale": "Column is expected to be populated"
+  },
+  {
+    "column": "amount",
+    "rule": "between",
+    "threshold": [
+      -75.60000000000001,
+      5371.151999999733
+    ],
+    "rationale": "Values outside p01-p99 band need review"
+  },
+  {
+    "column": "amount",
+    "rule": "gte",
+    "threshold": 0,
+    "rationale": "Amounts cannot be negative"
+  },
+  {
+    "column": "email",
+    "rule": "null_pct_lte",
+    "threshold": 1.0,
+    "rationale": "Column is expected to be populated"
+  },
+  {
+    "column": "email",
+    "rule": "matches_email",
+    "threshold": null,
+    "rationale": "Contact field"
+  },
+  {
+    "column": "*",
+    "rule": "unique_rows",
+    "threshold": null,
+    "rationale": "No exact duplicates"
+  },
+  {
+    "column": "order_id",
+    "rule": "unique",
+    "threshold": null,
+    "rationale": "Candidate primary key"
+  }
+]
