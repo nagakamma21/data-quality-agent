@@ -23,7 +23,7 @@ findings (severity, column, issue, count), and recommended fixes. Only cite
 numbers returned by tools."""
 
 
-def run_llm(path: str, model: str) -> str:
+def run_anthropic(path: str, model: str) -> str:
     import anthropic  # imported lazily so offline mode has no SDK dependency
 
     client = anthropic.Anthropic()
@@ -42,6 +42,32 @@ def run_llm(path: str, model: str) -> str:
                 results.append({"type": "tool_result", "tool_use_id": block.id,
                                 "content": json.dumps(out, default=str)})
         messages.append({"role": "user", "content": results})
+
+
+def run_openai(path: str, model: str) -> str:
+    from openai import OpenAI  # lazy import, same reason as above
+
+    client = OpenAI()
+    oa_tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                  "parameters": t["input_schema"]}} for t in tools.TOOLS]
+    messages = [{"role": "system", "content": SYSTEM},
+                {"role": "user", "content": f"Audit the dataset at {path}."}]
+    while True:
+        resp = client.chat.completions.create(model=model, messages=messages, tools=oa_tools)
+        msg = resp.choices[0].message
+        messages.append(msg)
+        if not msg.tool_calls:
+            return msg.content or ""
+        for call in msg.tool_calls:
+            args = json.loads(call.function.arguments or "{}")
+            print(f"  -> {call.function.name}({json.dumps(args)})")
+            out = tools.dispatch(call.function.name, args)
+            messages.append({"role": "tool", "tool_call_id": call.id,
+                             "content": json.dumps(out, default=str)})
+
+
+PROVIDERS = {"anthropic": (run_anthropic, "ANTHROPIC_API_KEY", "claude-sonnet-5"),
+             "openai": (run_openai, "OPENAI_API_KEY", "gpt-5")}
 
 
 def run_offline(path: str) -> str:
@@ -123,13 +149,16 @@ def main():
     ap = argparse.ArgumentParser(description="Run the Data Quality Agent on a CSV/Parquet file.")
     ap.add_argument("path")
     ap.add_argument("--offline", action="store_true", help="Run without an LLM (scripted planner)")
-    ap.add_argument("--model", default=os.getenv("DQ_MODEL", "claude-sonnet-5"))
+    ap.add_argument("--provider", choices=PROVIDERS, default=os.getenv("DQ_PROVIDER", "anthropic"))
+    ap.add_argument("--model", default=os.getenv("DQ_MODEL"), help="Override the provider's default model")
     ap.add_argument("--out", default="reports/report.md")
     args = ap.parse_args()
 
-    use_llm = not args.offline and os.getenv("ANTHROPIC_API_KEY")
-    print(f"Mode: {'LLM (' + args.model + ')' if use_llm else 'offline planner'}")
-    report = run_llm(args.path, args.model) if use_llm else run_offline(args.path)
+    runner, key_env, default_model = PROVIDERS[args.provider]
+    model = args.model or default_model
+    use_llm = not args.offline and os.getenv(key_env)
+    print(f"Mode: {args.provider + ' (' + model + ')' if use_llm else 'offline planner'}")
+    report = runner(args.path, model) if use_llm else run_offline(args.path)
     Path(args.out).parent.mkdir(exist_ok=True)
     Path(args.out).write_text(report)
     print(report)
