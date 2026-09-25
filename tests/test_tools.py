@@ -1,7 +1,15 @@
+from pathlib import Path
+
 from dq_agent import tools
 
+CSV = Path("sample_data/orders.csv")
+
+
 def setup_module():
-    tools.load_dataset("sample_data/orders.csv")
+    if not CSV.exists():  # regenerate deterministically if the file is absent
+        import runpy
+        runpy.run_path("sample_data/make_orders.py", run_name="__main__")
+    tools.load_dataset(str(CSV))
 
 def test_schema():
     assert tools.load_dataset("sample_data/orders.csv")["rows"] == 507
