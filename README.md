@@ -25,6 +25,7 @@ An LLM-driven agent that audits a dataset the way a senior data engineer would: 
 
 ```bash
 pip install -r requirements.txt
+python sample_data/make_orders.py        # builds the demo dataset with injected defects
 
 # No API key needed - scripted planner, same tool chain
 python -m dq_agent.agent sample_data/orders.csv --offline
