@@ -7,17 +7,17 @@ An LLM-driven agent that audits a dataset the way a senior data engineer would: 
 ## Architecture
 
 ```
- dataset.csv ──► Agent loop (Claude tool use)
-                    │  decides which check to run next
-                    ▼
-              ┌───────────────────────────────┐
-              │ tools.py  (deterministic)      │
-              │  load_dataset   profile_columns│
-              │  detect_anomalies  check_dups  │
-              │  validate_pattern  write_rules │
-              └───────────────────────────────┘
-                    │  JSON results
-                    ▼
+ dataset.csv --> Agent loop (LLM tool calling)
+                     |  decides which check to run next
+                     v
+              +--------------------------------+
+              | tools.py (deterministic)       |
+              |   load_dataset  profile_columns|
+              |   detect_anomalies  check_dups |
+              |   validate_pattern  write_rules|
+              +--------------------------------+
+                     |  JSON results
+                     v
         reports/report.md  +  reports/validation_rules.json
 ```
 
@@ -30,8 +30,8 @@ pip install -r requirements.txt
 python -m dq_agent.agent sample_data/orders.csv --offline
 
 # Full agent: the model plans the audit and writes the narrative
-export ANTHROPIC_API_KEY=...
-python -m dq_agent.agent sample_data/orders.csv
+export ANTHROPIC_API_KEY=...   # or OPENAI_API_KEY with --provider openai
+python -m dq_agent.agent sample_data/orders.csv --provider anthropic
 ```
 
 ## Sample result
@@ -53,6 +53,7 @@ Health score: **38 / 100**. All injected defects were recovered; the generated `
 ## Design decisions
 
 - **Tools are pure and testable.** `tests/` asserts each check independently of the LLM (`pytest`).
+- **Provider-agnostic.** The agent loop targets the generic tool-calling pattern; Anthropic and OpenAI backends are ~20 lines each behind a `--provider` flag.
 - **Offline mode** mirrors the tool sequence an LLM would choose, so the pipeline is demoable without credentials and cheap to run in CI.
 - **Rules as output, not just findings.** The agent's job ends with something a pipeline can enforce.
 
@@ -64,4 +65,4 @@ Health score: **38 / 100**. All injected defects were recovered; the generated `
 
 ## Author
 
-Naga Kamma — BI / AI-ML engineer. Formerly Agentic AI Lead on a COBOL-to-Java modernization program.
+Naga Kamma — BI / AI-ML engineer, 6 years across analytics platforms and agentic AI systems.
